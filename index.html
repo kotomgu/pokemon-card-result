@@ -162,7 +162,7 @@ summary{cursor:pointer;font-size:15px}
 <script>
 const $=id=>document.getElementById(id);
 const KEY="pokeRecords_v1";
-let shRange=null,shScene="",act={},noevAll={},noevOpen={},menuIdx=0,grpAll=false,histAll=false,evAll=false,histMode="ev",recs=[],decks=[],lists={},events=[],curEv="",evEditId=null,editId=null,dkOpen=false,editImgs=[],last={},sel={turn:"先攻",res:"勝"},cur="",sub="in";
+let rtRange=null,shRange=null,shScene="",act={},noevAll={},noevOpen={},menuIdx=0,grpAll=false,histAll=false,evAll=false,histMode="ev",recs=[],decks=[],lists={},events=[],curEv="",evEditId=null,editId=null,dkOpen=false,editImgs=[],last={},sel={turn:"先攻",res:"勝"},cur="",sub="in";
 try{
  recs=JSON.parse(localStorage.getItem(KEY)||"[]");
  decks=JSON.parse(localStorage.getItem(KEY+"_decks")||"[]");
@@ -353,11 +353,13 @@ function renderShare(fromEl,toEl,sceneEl){
  $("shto").onchange=()=>renderShare(shRange.from,$("shto").value,shScene);
  $("shscene").onchange=()=>renderShare(shRange.from,shRange.to,$("shscene").value);
 }
-function renderRate(){
- const pts=recs.filter(r=>r.rate!==undefined&&r.rate!==""&&r.rate!==null&&!isNaN(Number(r.rate)))
+function renderRate(fromEl,toEl){
+ if(!rtRange)rtRange=defShareRange();
+ const from=fromEl!==undefined?fromEl:rtRange.from,to=toEl!==undefined?toEl:rtRange.to;rtRange={from,to};
+ const pts=recs.filter(r=>r.rate!==undefined&&r.rate!==""&&r.rate!==null&&!isNaN(Number(r.rate))&&Number(r.rate)>550&&r.date.slice(0,10)>=from&&r.date.slice(0,10)<=to)
   .map(r=>({v:Number(r.rate),d:r.date,id:r.id,my:r.my,opp:r.opp,res:r.res})).sort((a,b)=>a.d.localeCompare(b.d)||a.id-b.id);
  let body;
- if(!pts.length)body='<div class="sub" style="margin-top:8px">レートの記録がありません。入力画面で場面を「PTCGL」にしてレートを入力すると、ここに推移が表示されます</div>';
+ if(!pts.length)body='<div class="sub" style="margin-top:8px">この期間のレートの記録がありません。入力画面で場面を「PTCGL」にしてレートを入力すると、ここに推移が表示されます(550以下のレートは表示されません)</div>';
  else{
   const W=320,H=190,L=44,R=12,T=14,B=28,vs=pts.map(p=>p.v),mn=Math.min(...vs),mx=Math.max(...vs);
   let lo=mn,hi=mx;if(lo===hi){lo-=10;hi+=10}else{const pad=(hi-lo)*0.1;lo-=pad;hi+=pad}
@@ -374,7 +376,11 @@ function renderRate(){
   <div class="sub" id="rtcap" style="margin-top:6px;min-height:20px">${esc(cap(last))}</div><div class="sub">点をタップすると、その対戦の情報が表示されます(全${pts.length}件)</div>`;
   setTimeout(()=>{$("rt").querySelectorAll("circle[data-i]").forEach(c=>c.onclick=()=>{$("rtcap").textContent=cap(pts[+c.dataset.i])})},0);
  }
- $("rt").innerHTML=`<div class="card"><h2 style="margin-top:0">レートの推移</h2><div class="sub">PTCGLで入力したレートの変化(古い順)</div>${body}</div>`;
+ $("rt").innerHTML=`<div class="card"><h2 style="margin-top:0">レートの推移</h2><div class="sub">PTCGLで入力したレートの変化(古い順・550以下は除く)</div>
+  <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="date" id="rtfrom" value="${from||""}" style="flex:1"><span class="sub">〜</span><input type="date" id="rtto" value="${to||""}" style="flex:1"></div>
+  ${body}</div>`;
+ $("rtfrom").onchange=()=>renderRate($("rtfrom").value,rtRange.to);
+ $("rtto").onchange=()=>renderRate(rtRange.from,$("rtto").value);
 }
 function renderEvs(){
  const list=[...events].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id),col={"勝":"var(--win)","負":"var(--lose)","分":"var(--draw)"};
